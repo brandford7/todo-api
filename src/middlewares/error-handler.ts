@@ -1,7 +1,6 @@
-import { ErrorRequestHandler } from "express";
-import { ValidationError } from "../errors/validaton-error";
-import { NotFoundError } from "../errors/not-found-error";
-import { DatabaseError } from "../errors/database-error";
+import { ErrorRequestHandler, NextFunction, Request, Response } from "express";
+import { CustomError } from "../errors/custom-error";
+
 
 export interface ErrorResponse {
   error: {
@@ -11,56 +10,15 @@ export interface ErrorResponse {
   };
 }
 
-export const errorHandler: ErrorRequestHandler = (err, req, res, next) => {
-  console.error(err);
-
-  const response: ErrorResponse = {
-    error: {
-      type: "ServerError",
-      message: "Something went wrong",
-    },
-  };
-
-  let statusCode = 500;
-
-  if (err instanceof ValidationError) {
-    statusCode = err.statusCode;
-    response.error = {
-      type: err.name,
-      message: err.message,
-      details: err.details,
-    };
-  } else if (err instanceof NotFoundError) {
-    statusCode = err.statusCode;
-    response.error = {
-      type: err.name,
-      message: err.message,
-    };
-  } else if (err.name === "MongoError" || err instanceof DatabaseError) {
-    statusCode = 500;
-    response.error = {
-      type: "DatabaseError",
-      message: "Database operation failed",
-    };
-  } else if (err.name === "ZodError") {
-    statusCode = 400;
-    response.error = {
-      type: "ValidationError",
-      message: "Validation failed",
-      details: err.errors,
-    };
-  } else if (err.name === "CastError") {
-    statusCode = 400;
-    response.error = {
-      type: "InvalidIdError",
-      message: "Invalid resource identifier",
-    };
-  } else if ("statusCode" in err) {
-    statusCode = (err as any).statusCode || 500;
-    response.error.message = err.message;
-  } else {
-    response.error.message = err.message || "Internal server error";
+export const errorHandler: ErrorRequestHandler = (
+  err: Error,
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  if (err instanceof CustomError) {
+    res.status(err.statusCode).json({ errors: err.serializeErrors() });
   }
 
-  res.status(statusCode).json(response);
+  return res.status(400).json("Something went wrong");
 };

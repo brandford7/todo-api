@@ -1,9 +1,14 @@
-export class NotFoundError extends Error {
-  statusCode: number;
+import { CustomError } from "./custom-error";
 
-  constructor(message: string = "Resource not found") {
-    super(message);
-    this.name = "NotFoundError";
-    this.statusCode = 404;
+export class NotFoundError extends CustomError {
+  statusCode = 404;
+
+  constructor() {
+    super("Route not found");
+    Object.setPrototypeOf(this, NotFoundError.prototype);
+  }
+
+  serializeErrors() {
+    return [{ message: "todo not found" }];
   }
 }

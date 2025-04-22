@@ -1,5 +1,4 @@
 import { Router } from "express";
-import asyncHandler from "express-async-handler";
 import Todo from "../models/Todo";
 import { validateRequest } from "../middlewares/validate";
 import { createActivitySchema, updateActivitySchema } from "../validators";
@@ -7,86 +6,60 @@ import { NotFoundError } from "../errors/not-found-error";
 import { DatabaseError } from "../errors/database-error";
 const router = Router();
 
-router.get(
-  "/",
-  asyncHandler(async (req, res) => {
-    try {
-      const todos = await Todo.find().sort({ createdAt: -1 });
-      res.json(todos);
-    } catch (error) {
-      throw new DatabaseError("Failed to fetch activities");
-    }
-  })
-);
+router.get("/", async (req, res) => {
+  const todos = await Todo.find({}).sort({ createdAt: -1 });
+  res.json(todos);
+  //throw new DatabaseError("failed to fetch todos");
+});
 
-router.post(
-  "/",
-  validateRequest(createActivitySchema),
-  asyncHandler(async (req, res) => {
-    try {
-      const { activity } = req.body;
-      const newTodo = new Todo({ activity });
-      const savedTodo = await newTodo.save();
-      res.status(201).json(savedTodo);
-    } catch (error) {
-      throw new DatabaseError("Failed to create activity");
-    }
-  })
-);
+router.post("/", validateRequest(createActivitySchema), async (req, res) => {
+  const { activity } = req.body;
+  const newTodo = new Todo({ activity });
+  const savedTodo = await newTodo.save();
+  res.status(201).json(savedTodo);
 
-router.put(
-  "/:id",
-  validateRequest(updateActivitySchema),
-  asyncHandler(async (req, res) => {
-    try {
-      const updatedTodo = await Todo.findByIdAndUpdate(
-        req.params.id,
-        { activity: req.body.activity },
-        { new: true, runValidators: true }
-      );
+  // throw new DatabaseError("Failed to create activity");
+});
 
-      if (!updatedTodo) {
-        throw new NotFoundError("Activity not found");
-      }
+router.put("/:id", validateRequest(updateActivitySchema), async (req, res) => {
+  const updatedTodo = await Todo.findByIdAndUpdate(
+    req.params.id,
+    { activity: req.body.activity },
+    { new: true, runValidators: true }
+  );
 
-      res.json(updatedTodo);
-    } catch (error) {
-      throw new DatabaseError("Failed to update activity");
-    }
-  })
-);
+  if (!updatedTodo) {
+    throw new NotFoundError();
+  }
 
-router.delete(
-  "/:id",
-  asyncHandler(async (req, res) => {
-    try {
-      const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
+  res.status(200).json(updatedTodo);
 
-      if (!deletedTodo) {
-        throw new NotFoundError("Activity not found");
-      }
+  // throw new DatabaseError("Failed to update activity");
+});
 
-      res.json({ message: "Activity deleted successfully" });
-    } catch (error) {
-      throw new DatabaseError("Failed to delete activity");
-    }
-  })
-);
+router.delete("/:id", async (req, res) => {
+  const deletedTodo = await Todo.findByIdAndDelete(req.params.id);
 
-router.put(
-  "/:id/toggle",
-  asyncHandler(async (req, res) => {
-    const todo = await Todo.findById(req.params.id);
+  if (!deletedTodo) {
+    throw new NotFoundError();
+  }
 
-    if (!todo) {
-      throw new NotFoundError("Todo not found");
-    }
+  // throw new DatabaseError("Failed to delete activity");
 
-    todo.completed = !todo.completed;
-    const updatedTodo = await todo.save();
+  res.json({ message: "Activity deleted successfully" });
+});
 
-    res.json(updatedTodo);
-  })
-);
+router.put("/:id/toggle", async (req, res) => {
+  const todo = await Todo.findById(req.params.id);
+
+  if (!todo) {
+    throw new NotFoundError();
+  }
+
+  todo.completed = !todo.completed;
+  const updatedTodo = await todo.save();
+
+  res.json(updatedTodo);
+});
 
 export default router;
